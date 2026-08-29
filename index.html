@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mis Finanzas</title>
+<style>
+  :root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f1ee;
+    --text-1:#0b0b0b; --text-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --credito:#2a78d6; --credito-bg:#cde2fb;
+    --debito:#eb6834; --debito-bg:#fbdfd2;
+    --good:#006300; --critical:#d03b3b;
+    --seq-100:#cde2fb; --seq-400:#3987e5; --seq-450:#2a78d6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      color-scheme: dark;
+      --page:#0d0d0d; --surface:#1a1a19; --surface-2:#232322;
+      --text-1:#ffffff; --text-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+      --credito:#3987e5; --credito-bg:#173154;
+      --debito:#d95926; --debito-bg:#4a2413;
+      --good:#0ca30c; --critical:#e66767;
+      --seq-100:#173154; --seq-400:#3987e5; --seq-450:#2a78d6;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--page);color:var(--text-1);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+  body{padding-bottom:env(safe-area-inset-bottom,0);}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--page);}
+
+  header.top{position:sticky;top:0;z-index:20;background:var(--page);
+    padding:14px 16px 8px;border-bottom:1px solid var(--border);}
+  .top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .brand{font-size:15px;font-weight:700;letter-spacing:.2px;}
+  .status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-2);}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none;}
+  .dot.live{background:var(--good);box-shadow:0 0 0 0 rgba(12,163,12,.6);animation:pulse 1.8s infinite;}
+  .dot.error{background:var(--critical);}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(12,163,12,.45);}70%{box-shadow:0 0 0 6px rgba(12,163,12,0);}100%{box-shadow:0 0 0 0 rgba(12,163,12,0);}}
+  .refresh-btn{border:none;background:transparent;color:var(--text-2);padding:4px;cursor:pointer;font-size:16px;line-height:1;}
+  .refresh-btn:active{opacity:.5;}
+
+  select.periodo-select{width:100%;margin-top:10px;padding:10px 12px;border-radius:12px;
+    border:1px solid var(--border);background:var(--surface);color:var(--text-1);
+    font-size:15px;font-weight:600;font-family:inherit;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0Z' fill='%23898781'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px 4px;}
+  .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;}
+  .stat-tile .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .stat-tile .value{font-size:20px;font-weight:700;margin-top:4px;font-variant-numeric:proportional-nums;}
+  .stat-tile .delta{font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px;}
+  .stat-tile .delta.up{color:var(--critical);}
+  .stat-tile .delta.down{color:var(--good);}
+  .stat-tile .sub{font-size:11px;color:var(--text-2);margin-top:4px;}
+
+  nav.tabs{display:flex;gap:4px;padding:12px 16px 4px;position:sticky;top:57px;z-index:15;background:var(--page);}
+  .tab-btn{flex:1;padding:9px 4px;text-align:center;border-radius:10px;border:none;
+    background:var(--surface-2);color:var(--text-2);font-size:12.5px;font-weight:600;
+    font-family:inherit;cursor:pointer;}
+  .tab-btn.active{background:var(--text-1);color:var(--page);}
+
+  section.view{padding:14px 16px 4px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:14px 14px 10px;margin-bottom:12px;}
+  .card h3{margin:0 0 2px;font-size:13.5px;font-weight:700;}
+  .card .caption{font-size:11px;color:var(--muted);margin-bottom:8px;}
+  .legend{display:flex;gap:14px;font-size:11.5px;color:var(--text-2);margin-bottom:6px;}
+  .legend span{display:inline-flex;align-items:center;gap:5px;}
+  .swatch{width:9px;height:9px;border-radius:2px;flex:none;}
+
+  .table-toggle{font-size:11px;color:var(--text-2);text-decoration:underline;
+    background:none;border:none;padding:4px 0 0;cursor:pointer;font-family:inherit;}
+  table.data-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;display:none;}
+  table.data-table.show{display:table;}
+  table.data-table th,table.data-table td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--grid);}
+  table.data-table th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;}
+  table.data-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+
+  .tooltip{position:absolute;pointer-events:none;background:var(--text-1);color:var(--page);
+    font-size:11px;padding:6px 8px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-115%);
+    z-index:30;opacity:0;transition:opacity .1s;}
+  .tooltip.show{opacity:1;}
+  .chart-wrap{position:relative;}
+
+  .bar-row{display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;}
+  .bar-row .name{width:34%;font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;}
+  .bar-track{flex:1;background:var(--seq-100);border-radius:6px;height:20px;position:relative;overflow:hidden;}
+  .bar-fill{background:var(--seq-400);height:100%;border-radius:6px;min-width:3px;}
+  .bar-val{font-size:11.5px;font-weight:700;width:66px;text-align:right;flex:none;font-variant-numeric:tabular-nums;}
+
+  .grouped-bars{display:flex;gap:24px;align-items:flex-end;height:150px;padding:8px 20px 0;}
+  .gb-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;}
+  .gb-bar{width:56px;border-radius:6px 6px 3px 3px;}
+  .gb-label-val{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .gb-label-name{font-size:11px;color:var(--text-2);margin-top:6px;}
+
+  .hero{padding:6px 2px 4px;}
+  .hero .amount{font-size:32px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:proportional-nums;}
+  .hero .amount-label{font-size:12px;color:var(--muted);}
+  .mini-list{margin-top:10px;}
+  .mini-row{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--grid);}
+  .mini-row:last-child{border-bottom:none;}
+  .mini-row .right{font-weight:700;font-variant-numeric:tabular-nums;}
+
+  .tx-list{padding:2px 16px 24px;}
+  .tx-item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--grid);}
+  .tx-icon{width:36px;height:36px;border-radius:50%;background:var(--surface-2);flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text-2);}
+  .tx-mid{flex:1;min-width:0;}
+  .tx-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx-sub{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:6px;align-items:center;}
+  .badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;letter-spacing:.02em;}
+  .badge.credito{background:var(--credito-bg);color:var(--credito);}
+  .badge.debito{background:var(--debito-bg);color:var(--debito);}
+  .tx-amt{font-size:13.5px;font-weight:700;flex:none;color:var(--text-1);}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+  .empty button{margin-top:12px;padding:9px 18px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-1);font-family:inherit;font-size:13px;cursor:pointer;}
+  footer{text-align:center;font-size:10.5px;color:var(--muted);padding:6px 16px 20px;}
+  svg text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">💳 Mis Finanzas</div>
+      <div class="status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Conectando…</span>
+        <button class="refresh-btn" id="refreshBtn" title="Actualizar" aria-label="Actualizar">⟳</button>
+      </div>
+    </div>
+    <select class="periodo-select" id="periodoSelect"></select>
+  </header>
+
+  <div class="stat-grid" id="statGrid"></div>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-view="total">Total</button>
+    <button class="tab-btn" data-view="periodo">Periodo</button>
+    <button class="tab-btn" data-view="tarjeta">Tarjeta</button>
+    <button class="tab-btn" data-view="comercio">Comercio</button>
+  </nav>
+
+  <section class="view" id="viewContent"></section>
+
+  <div id="txListWrap">
+    <div style="padding:10px 16px 0;font-size:12.5px;font-weight:700;color:var(--text-2);">MOVIMIENTOS</div>
+    <div class="tx-list" id="txList"></div>
+  </div>
+
+  <footer>Datos en vivo desde Firebase Realtime Database</footer>
+</div>
+
+<script>
+// ====== CONFIGURA ESTAS LINEAS (pega tus datos de Firebase) ======
+const FIREBASE_URL    = "https://bcp-gastos-default-rtdb.firebaseio.com";
+const FIREBASE_SECRET = "A3KOgxqXNQPkp8DeyaxixbRfJEnBOb5IvvNcIvZF";  // opcional: pega aquí tu Database Secret si tus reglas NO son de lectura pública
+// ===================================================================
+function dataUrl(){
+  let u = FIREBASE_URL.replace(/\/+$/,"") + "/transacciones.json";
+  if (FIREBASE_SECRET) u += "?auth=" + encodeURIComponent(FIREBASE_SECRET);
+  return u;
+}
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const MESES_CORTO = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+let allTx = [];
+let currentPeriodo = null;
+let currentView = 'total';
+let esConn = null;
+
+function fmt(v, moneda){
+  const cur = moneda === 'USD' ? 'USD' : 'PEN';
+  try{
+    return new Intl.NumberFormat('es-PE',{style:'currency',currency:cur,minimumFractionDigits:2}).format(v);
+  }catch(e){ return (cur==='USD'?'$':'S/ ')+v.toFixed(2); }
+}
+function periodoLabel(p){ if(!p) return ''; const [y,m]=p.split('-'); return MESES[parseInt(m,10)-1]+' '+y; }
+function periodoCorto(p){ if(!p) return ''; const [y,m]=p.split('-'); return MESES_CORTO[parseInt(m,10)-1]; }
+
+function setStatus(state){
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'dot' + (state==='live' ? ' live' : state==='error' ? ' error' : '');
+  txt.textContent = state==='live' ? 'En vivo' : state==='error' ? 'Sin conexión' : 'Actualizando…';
+}
+
+function flatten(data){
+  const out = [];
+  if(!data) return out;
+  for(const periodo in data){
+    const txs = data[periodo];
+    if(!txs) continue;
+    for(const id in txs){
+      out.push(Object.assign({}, txs[id], {periodo, id}));
+    }
+  }
+  return out;
+}
+
+async function fetchData(isRetry){
+  setStatus('loading');
+  try{
+    const res = await fetch(dataUrl(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data && data.error) throw new Error(data.error);
+    allTx = flatten(data);
+    setStatus('live');
+    onDataUpdated();
+  }catch(err){
+    setStatus('error');
+    if(allTx.length === 0) renderEmpty(err);
+  }
+}
+
+function connectStream(){
+  try{
+    esConn = new EventSource(dataUrl());
+    esConn.addEventListener('put', () => fetchData());
+    esConn.addEventListener('patch', () => fetchData());
+    esConn.onerror = () => setStatus('error');
+  }catch(e){ /* EventSource not available, polling fallback */
+    setInterval(fetchData, 30000);
+  }
+}
+
+function onDataUpdated(){
+  const periodos = [...new Set(allTx.map(t=>t.periodo))].sort();
+  if(periodos.length === 0){ renderEmpty(); return; }
+  if(!currentPeriodo || !periodos.includes(currentPeriodo)) currentPeriodo = periodos[periodos.length-1];
+  renderPeriodoSelect(periodos);
+  renderStats();
+  renderView();
+  renderTxList();
+}
+
+function renderEmpty(err){
+  const msg = err ? `No se pudo leer de Firebase (${err.message||err}). Revisa la URL, el Secret y las reglas de lectura.`
+                  : 'Sin transacciones registradas todavía.';
+  document.getElementById('viewContent').innerHTML =
+    `<div class="empty">${msg}<br><button id="retryBtn">Reintentar</button></div>`;
+  document.getElementById('statGrid').innerHTML = '';
+  document.getElementById('txList').innerHTML = '';
+  const rb = document.getElementById('retryBtn');
+  if(rb) rb.onclick = () => fetchData();
+}
+
+function renderPeriodoSelect(periodos){
+  const sel = document.getElementById('periodoSelect');
+  const prev = sel.value;
+  sel.innerHTML = periodos.slice().reverse().map(p =>
+    `<option value="${p}" ${p===currentPeriodo?'selected':''}>${periodoLabel(p)}</option>`).join('');
+  sel.value = currentPeriodo;
+}
+
+function txForPeriodo(p){ return allTx.filter(t => t.periodo === p); }
+
+function renderStats(){
+  const periodos = [...new Set(allTx.map(t=>t.periodo))].sort();
+  const idx = periodos.indexOf(currentPeriodo);
+  const prevPeriodo = idx > 0 ? periodos[idx-1] : null;
+  const curTx = txForPeriodo(currentPeriodo);
+  const monedaDom = dominantMoneda(curTx);
+  const total = sum(curTx.filter(t=>(t.moneda||'PEN')===monedaDom));
+  const n = curTx.length;
+  const avg = n ? total/curTx.filter(t=>(t.moneda||'PEN')===monedaDom).length : 0;
+  const mayor = curTx.slice().sort((a,b)=>b.monto-a.monto)[0];
+
+  let deltaHtml = '<div class="sub">Sin datos del mes anterior</div>';
+  if(prevPeriodo){
+    const prevTx = txForPeriodo(prevPeriodo).filter(t=>(t.moneda||'PEN')===monedaDom);
+    const prevTotal = sum(prevTx);
+    if(prevTotal > 0){
+      const diff = total - prevTotal;
+      const pct = (diff/prevTotal*100);
+      const up = diff > 0;
+      deltaHtml = `<div class="delta ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(pct).toFixed(1)}% vs ${periodoCorto(prevPeriodo)}</div>`;
+    }
+  }
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-tile">
+      <div class="label">Total gastado</div>
+      <div class="value">${fmt(total, monedaDom)}</div>
+      ${deltaHtml}
+    </div>
+    <div class="stat-tile">
+      <div class="label">Transacciones</div>
+      <div class="value">${n}</div>
+      <div class="sub">en ${periodoLabel(currentPeriodo)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Ticket promedio</div>
+      <div class="value">${fmt(avg, monedaDom)}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="label">Mayor gasto</div>
+      <div class="value">${mayor?fmt(mayor.monto, mayor.moneda):'—'}</div>
+      <div class="sub">${mayor?truncate(mayor.comercio,18):''}</div>
+    </div>
+  `;
+}
+
+function dominantMoneda(txs){
+  const counts = {};
+  txs.forEach(t => { const m = t.moneda||'PEN'; counts[m]=(counts[m]||0)+1; });
+  return Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0] || 'PEN';
+}
+function sum(txs){ return txs.reduce((a,t)=>a+(Number(t.monto)||0),0); }
+function truncate(s,n){ if(!s) return ''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+function renderView(){
+  const container = document.getElementById('viewContent');
+  if(currentView === 'total') container.innerHTML = viewTotal();
+  else if(currentView === 'periodo') container.innerHTML = viewPeriodo();
+  else if(currentView === 'tarjeta') container.innerHTML = viewTarjeta();
+  else if(currentView === 'comercio') container.innerHTML = viewComercio();
+  attachViewHandlers();
+}
+
+// ---------- VIEW: TOTAL ----------
+function viewTotal(){
+  const curTx = txForPeriodo(currentPeriodo);
+  const monedaDom = dominantMoneda(curTx);
+  const relevant = curTx.filter(t=>(t.moneda||'PEN')===monedaDom);
+  const total = sum(relevant);
+  const bancoTotals = groupSum(relevant, 'banco');
+  const rows = Object.entries(bancoTotals).sort((a,b)=>b[1]-a[1]);
+  return `
+    <div class="card">
+      <h3>Resumen del periodo</h3>
+      <div class="caption">${periodoLabel(currentPeriodo)}</div>
+      <div class="hero">
+        <div class="amount">${fmt(total, monedaDom)}</div>
+        <div class="amount-label">gastado en ${relevant.length} transacciones</div>
+      </div>
+      <div class="mini-list">
+        ${rows.map(([banco,val])=>`<div class="mini-row"><span>${banco||'Otro'}</span><span class="right">${fmt(val,monedaDom)}</span></div>`).join('') || '<div class="sub">Sin datos por banco</div>'}
+      </div>
+    </div>
+  `;
+}
+
+// ---------- VIEW: PERIODO (trend line) ----------
+function viewPeriodo(){
+  const periodos = [...new Set(allTx.map(t=>t.periodo))].sort();
+  const points = periodos.map(p=>{
+    const txs = txForPeriodo(p);
+    const md = dominantMoneda(txs);
+    return {label:p, value: sum(txs.filter(t=>(t.moneda||'PEN')===md)), moneda: md};
+  });
+  return `
+    <div class="card">
+      <h3>Evolución mensual</h3>
+      <div class="caption">Gasto total por periodo facturado</div>
+      <div class="chart-wrap" id="lineChartWrap">${svgLineChart(points)}<div class="tooltip" id="lineTooltip"></div></div>
+      <button class="table-toggle" data-table="lineTable">Ver tabla</button>
+      <table class="data-table" id="lineTable">
+        <thead><tr><th>Periodo</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>${points.map(p=>`<tr><td>${periodoLabel(p.label)}</td><td class="num">${fmt(p.value,p.moneda)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function svgLineChart(points){
+  if(points.length === 0) return '<div class="empty">Sin datos</div>';
+  const w=440, h=160, padL=8, padR=8, padT=14, padB=24;
+  const innerW = w-padL-padR, innerH = h-padT-padB;
+  const max = Math.max(...points.map(p=>p.value), 1);
+  const stepX = points.length>1 ? innerW/(points.length-1) : 0;
+  const xy = points.map((p,i)=>{
+    const x = padL + (points.length>1 ? i*stepX : innerW/2);
+    const y = padT + innerH - (p.value/max)*innerH;
+    return {x,y,...p};
+  });
+  const linePath = xy.map((pt,i)=> (i===0?'M':'L')+pt.x.toFixed(1)+','+pt.y.toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${xy[xy.length-1].x.toFixed(1)},${padT+innerH} L${xy[0].x.toFixed(1)},${padT+innerH} Z`;
+  const gridY = [0,0.5,1].map(f=> padT + innerH*f);
+  return `
+  <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" style="overflow:visible">
+    ${gridY.map(y=>`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`).join('')}
+    <path d="${areaPath}" fill="var(--credito)" opacity="0.12" stroke="none"/>
+    <path d="${linePath}" fill="none" stroke="var(--credito)" stroke-width="2"/>
+    ${xy.map(pt=>`<circle class="pt" data-label="${pt.label}" data-value="${pt.value}" data-moneda="${pt.moneda}" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="9" fill="transparent" style="cursor:pointer"/>
+    <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="var(--credito)"/>`).join('')}
+    ${xy.map(pt=>`<text x="${pt.x.toFixed(1)}" y="${h-6}" font-size="9.5" fill="var(--muted)" text-anchor="middle">${periodoCorto(pt.label)}</text>`).join('')}
+  </svg>`;
+}
+
+// ---------- VIEW: TARJETA ----------
+function viewTarjeta(){
+  const curTx = txForPeriodo(currentPeriodo);
+  const monedaDom = dominantMoneda(curTx);
+  const relevant = curTx.filter(t=>(t.moneda||'PEN')===monedaDom);
+  const groups = groupSum(relevant, 'tipoTarjeta');
+  const credito = groups['Crédito'] || groups['Credito'] || 0;
+  const debito = groups['Débito'] || groups['Debito'] || 0;
+  const nCred = relevant.filter(t=>/cr[eé]dito/i.test(t.tipoTarjeta||'')).length;
+  const nDeb = relevant.filter(t=>/d[eé]bito/i.test(t.tipoTarjeta||'')).length;
+  const max = Math.max(credito, debito, 1);
+  const total = credito+debito;
+  return `
+    <div class="card">
+      <h3>Crédito vs Débito</h3>
+      <div class="caption">${periodoLabel(currentPeriodo)}</div>
+      <div class="legend">
+        <span><span class="swatch" style="background:var(--credito)"></span>Crédito</span>
+        <span><span class="swatch" style="background:var(--debito)"></span>Débito</span>
+      </div>
+      <div class="grouped-bars">
+        <div class="gb-col" data-cat="Crédito" data-value="${credito}" data-count="${nCred}" data-moneda="${monedaDom}">
+          <div class="gb-label-val">${fmt(credito,monedaDom)}</div>
+          <div class="gb-bar" style="height:${Math.max((credito/max)*100,4)}%;background:var(--credito)"></div>
+          <div class="gb-label-name">Crédito · ${nCred}</div>
+        </div>
+        <div class="gb-col" data-cat="Débito" data-value="${debito}" data-count="${nDeb}" data-moneda="${monedaDom}">
+          <div class="gb-label-val">${fmt(debito,monedaDom)}</div>
+          <div class="gb-bar" style="height:${Math.max((debito/max)*100,4)}%;background:var(--debito)"></div>
+          <div class="gb-label-name">Débito · ${nDeb}</div>
+        </div>
+      </div>
+      <div class="sub" style="text-align:center;color:var(--text-2);font-size:11.5px;margin-top:6px;">
+        ${total>0 ? `Crédito ${(credito/total*100).toFixed(0)}% · Débito ${(debito/total*100).toFixed(0)}%` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ---------- VIEW: COMERCIO ----------
+function viewComercio(){
+  const curTx = txForPeriodo(currentPeriodo);
+  const monedaDom = dominantMoneda(curTx);
+  const relevant = curTx.filter(t=>(t.moneda||'PEN')===monedaDom);
+  const groups = groupSum(relevant, 'comercio');
+  const rows = Object.entries(groups).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const max = Math.max(...rows.map(r=>r[1]), 1);
+  return `
+    <div class="card">
+      <h3>Top comercios</h3>
+      <div class="caption">${periodoLabel(currentPeriodo)}</div>
+      ${rows.map(([name,val])=>{
+        const count = relevant.filter(t=>t.comercio===name).length;
+        return `<div class="bar-row" data-name="${escapeAttr(name)}" data-value="${val}" data-count="${count}" data-moneda="${monedaDom}">
+          <div class="name">${truncate(name,16)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max((val/max)*100,3)}%"></div></div>
+          <div class="bar-val">${fmt(val,monedaDom)}</div>
+        </div>`;
+      }).join('') || '<div class="empty">Sin comercios</div>'}
+      <button class="table-toggle" data-table="comercioTable">Ver tabla</button>
+      <table class="data-table" id="comercioTable">
+        <thead><tr><th>Comercio</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>${rows.map(([name,val])=>`<tr><td>${name}</td><td class="num">${fmt(val,monedaDom)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function groupSum(txs, field){
+  const out = {};
+  txs.forEach(t=>{ const k = t[field] || 'Otro'; out[k]=(out[k]||0)+(Number(t.monto)||0); });
+  return out;
+}
+function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+function attachViewHandlers(){
+  document.querySelectorAll('.table-toggle').forEach(btn=>{
+    btn.onclick = () => {
+      const t = document.getElementById(btn.dataset.table);
+      if(t) t.classList.toggle('show');
+    };
+  });
+  // line chart tooltip
+  const lineWrap = document.getElementById('lineChartWrap');
+  if(lineWrap){
+    const tip = document.getElementById('lineTooltip');
+    lineWrap.querySelectorAll('.pt').forEach(pt=>{
+      pt.addEventListener('click',(e)=>{
+        const rect = lineWrap.getBoundingClientRect();
+        const svgRect = pt.ownerSVGElement.getBoundingClientRect();
+        const cx = pt.cx.baseVal.value, cy = pt.cy.baseVal.value;
+        const scaleX = svgRect.width/440;
+        const left = svgRect.left - rect.left + cx*scaleX;
+        const top = svgRect.top - rect.top + cy*scaleX*(160/160);
+        tip.style.left = left+'px';
+        tip.style.top = (top* (svgRect.height/160))+'px';
+        tip.textContent = `${periodoLabel(pt.dataset.label)}: ${fmt(Number(pt.dataset.value), pt.dataset.moneda)}`;
+        tip.classList.add('show');
+        setTimeout(()=>tip.classList.remove('show'), 2200);
+      });
+    });
+  }
+  // grouped bars tooltip (alert-free: use title-ish inline text via temporary label swap)
+  document.querySelectorAll('.gb-col').forEach(col=>{
+    col.addEventListener('click',()=>{
+      const nameEl = col.querySelector('.gb-label-name');
+      const original = nameEl.textContent;
+      nameEl.textContent = `${col.dataset.count} mov. · ${fmt(Number(col.dataset.value), col.dataset.moneda)}`;
+      setTimeout(()=>{ nameEl.textContent = original; }, 2000);
+    });
+  });
+  // comercio rows
+  document.querySelectorAll('.bar-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const valEl = row.querySelector('.bar-val');
+      const original = valEl.textContent;
+      valEl.textContent = `${row.dataset.count}x`;
+      setTimeout(()=>{ valEl.textContent = original; }, 1500);
+    });
+  });
+}
+
+function renderTxList(){
+  const curTx = txForPeriodo(currentPeriodo).slice().sort((a,b)=>{
+    const ta = (a.fecha||'')+'T'+(a.hora||'00:00:00');
+    const tb = (b.fecha||'')+'T'+(b.hora||'00:00:00');
+    return tb.localeCompare(ta);
+  });
+  document.getElementById('txList').innerHTML = curTx.map(t=>{
+    const isCred = /cr[eé]dito/i.test(t.tipoTarjeta||'');
+    const initial = (t.comercio||'?').trim().charAt(0).toUpperCase();
+    return `
+    <div class="tx-item">
+      <div class="tx-icon">${initial}</div>
+      <div class="tx-mid">
+        <div class="tx-name">${t.comercio||'Comercio desconocido'}</div>
+        <div class="tx-sub">
+          <span class="badge ${isCred?'credito':'debito'}">${isCred?'CRÉDITO':'DÉBITO'}</span>
+          <span>${t.fecha||''} ${t.hora?t.hora.slice(0,5):''}</span>
+          ${t.ultimos4?`<span>••${t.ultimos4}</span>`:''}
+        </div>
+      </div>
+      <div class="tx-amt">-${fmt(t.monto, t.moneda)}</div>
+    </div>`;
+  }).join('') || '<div class="empty">Sin movimientos en este periodo</div>';
+}
+
+// ---------- events ----------
+document.getElementById('periodoSelect').addEventListener('change', (e)=>{
+  currentPeriodo = e.target.value;
+  renderStats(); renderView(); renderTxList();
+});
+document.getElementById('tabs').addEventListener('click',(e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentView = btn.dataset.view;
+  renderView();
+});
+document.getElementById('refreshBtn').addEventListener('click', ()=>fetchData());
+
+fetchData();
+connectStream();
+</script>
+</body>
+</html>
